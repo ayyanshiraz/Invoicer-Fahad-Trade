@@ -1,114 +1,172 @@
-import sql from "@/lib/db";
-import { FileText, Eye, Calendar, User, ReceiptText, Wallet } from "lucide-react";
+"use client";
+import { useState, useEffect, useRef } from "react";
+import { Search, RotateCcw, User, FileText, ArrowRight, Hash, ReceiptText } from "lucide-react";
 import Link from "next/link";
 
-// [SEO Friendly] Metadata Section
-export const metadata = {
-  title: `Sales History - Fahad Traders`,
-  description: `View all past invoices and sales records for Fahad Traders UAE`,
-  seoTitle: `Invoice Directory - Fahad Traders Management`,
-  slug: `dashboard/invoice`,
-  metaDescription: `Access and track all generated business invoices and customer billing history`,
-  focusKeyPhrase: `Sales History Dashboard`,
-  seoKeyPhrase: `Business Invoicing Records`,
-  imgAltText: `List of generated invoices with customer names and totals`,
-};
+export default function SalesReturnsPage() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-export default async function InvoiceListPage() {
-  // Query update ki hai taake naye balance columns b mil sakein
-  const invoices = await sql`
-    SELECT i.*, c.name as customer_name 
-    FROM invoices i 
-    JOIN customers c ON i.customer_id = c.id 
-    ORDER BY i.created_at DESC
-  `;
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // 1. Customers load karna
+  useEffect(() => {
+    async function loadCustomers() {
+      const res = await fetch("/api/customers");
+      const data = await res.json();
+      setCustomers(data);
+    }
+    loadCustomers();
+  }, []);
+
+  // 2. Customer select hone par uski invoices fetch karna
+  const fetchInvoices = async (customerId: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/invoices?customerId=${customerId}`);
+      const data = await res.json();
+      setCustomerInvoices(data);
+    } catch (error) {
+      console.error("Error fetching invoices");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Search logic (Case-insensitive)
+  const filteredCustomers = searchTerm.length > 0 
+    ? customers.filter(c => {
+        const s = searchTerm.toLowerCase();
+        return c.name?.toLowerCase().includes(s) || (c.manual_id && c.manual_id.toLowerCase().includes(s));
+      })
+    : [];
+
+  // 4. Enter press karne par auto-fetch
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const match = customers.find(c => c.manual_id?.toLowerCase() === searchTerm.toLowerCase()) 
+                    || (filteredCustomers.length > 0 ? filteredCustomers[0] : null);
+
+      if (match) {
+        setSelectedCustomer(match);
+        setSearchTerm(`${match.name} (${match.manual_id})`);
+        fetchInvoices(match.id);
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-600 text-white rounded-lg">
-            <ReceiptText className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Sales Invoices</h1>
-            <p className="text-sm text-gray-500">History of all generated bills and customer ledgers</p>
-          </div>
+      {/* Header */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div className="p-3 bg-red-600 text-white rounded-xl shadow-lg">
+          <RotateCcw className="w-6 h-6" />
         </div>
-        <Link 
-          href="/dashboard/invoice/new" 
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
-        >
-          Create New Bill
-        </Link>
+        <div>
+          <h1 className="text-xl font-black text-slate-800 uppercase">Sales rrrrReturns</h1>
+          <p className="text-xs text-slate-400 font-bold">Search customer to initiate product return</p>
+        </div>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 text-gray-600 text-[10px] uppercase font-black tracking-widest">
-              <tr>
-                <th className="px-6 py-4">Invoice ID</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Net Bill</th>
-                <th className="px-6 py-4">Current Balance</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-blue-50/30 transition-colors group">
-                  <td className="px-6 py-4 font-bold text-blue-600">
-                    #{inv.id.toString().padStart(5, `0`)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <span className="font-bold text-gray-800">{inv.customer_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-black text-gray-900">
-                    PKR {Number(inv.total_amount).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                      <Wallet className="w-3.5 h-3.5" />
-                      PKR {Number(inv.current_balance).toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-500 text-sm font-medium">
-                    {new Date(inv.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Link 
-                      href={`/dashboard/invoice/${inv.id}`}
-                      className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </Link>
-                  </td>
-                </tr>
+      {/* Customer Search Bar */}
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+        <div className="max-w-xl mx-auto relative">
+          <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest text-center">Enter Customer Manual ID</label>
+          <div className="relative">
+            <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+            <input 
+              ref={searchRef}
+              type="text"
+              className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-red-500/10 font-bold text-lg"
+              placeholder="e.g. CUST-001"
+              value={searchTerm}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (selectedCustomer) {
+                  setSelectedCustomer(null);
+                  setCustomerInvoices([]);
+                }
+              }}
+            />
+          </div>
+          
+          {/* Dropdown Results */}
+          {searchTerm && !selectedCustomer && filteredCustomers.length > 0 && (
+            <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden">
+              {filteredCustomers.map(c => (
+                <div 
+                  key={c.id} 
+                  className="p-4 hover:bg-red-50 cursor-pointer flex justify-between items-center border-b border-slate-50"
+                  onClick={() => {
+                    setSelectedCustomer(c);
+                    setSearchTerm(`${c.name} (${c.manual_id})`);
+                    fetchInvoices(c.id);
+                  }}
+                >
+                  <span className="font-bold text-slate-700">{c.name}</span>
+                  <span className="text-xs bg-slate-100 px-3 py-1 rounded-full font-black text-slate-500 uppercase">ID: {c.manual_id}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-
-        {invoices.length === 0 && (
-          <div className="p-24 text-center">
-            <div className="inline-flex p-4 rounded-full bg-gray-50 mb-4">
-              <FileText className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-gray-400 italic font-medium">
-              No sales records found in database
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Invoice List for Selected Customer */}
+      {selectedCustomer && (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <ReceiptText className="text-red-600 w-5 h-5" />
+              <h3 className="font-black text-slate-800 uppercase text-sm tracking-widest">Invoices for {selectedCustomer.name}</h3>
+            </div>
+            <span className="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg uppercase">Select Invoice to Return</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                <tr>
+                  <th className="px-8 py-5">Invoice ID</th>
+                  <th className="px-8 py-5">Bill Amount</th>
+                  <th className="px-8 py-5">Date</th>
+                  <th className="px-8 py-5 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {loading ? (
+                  <tr><td colSpan={4} className="p-10 text-center text-slate-400 font-bold">Loading invoices...</td></tr>
+                ) : customerInvoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-red-50/30 transition-colors group">
+                    <td className="px-8 py-5 font-black text-slate-700">#{inv.id.toString().padStart(5, "0")}</td>
+                    <td className="px-8 py-5 font-black text-red-600">PKR {Number(inv.total_amount).toLocaleString()}</td>
+                    <td className="px-8 py-5 text-sm text-slate-500 font-medium">{new Date(inv.created_at).toLocaleDateString()}</td>
+                    <td className="px-8 py-5 text-center">
+                      <Link 
+                        href={`/dashboard/invoice/returns/${inv.id}`}
+                        className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-md"
+                      >
+                        Process Return <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {!loading && customerInvoices.length === 0 && (
+            <div className="p-20 text-center text-slate-400 font-bold italic">
+              No invoices found for this customer
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,32 +1,35 @@
 "use client";
-import { useState, useEffect } from "react";
-import { ArrowLeft, Save, UserPlus, CreditCard, Smartphone } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, Save, UserPlus, CreditCard, Smartphone, Hash, MapPin } from "lucide-react";
 import Link from "next/link";
 import { createCustomerAction } from "./actions";
 
 export default function NewCustomerPage() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState(``);
-  
+  // Input Refs for Enter Key Navigation
+  const nameRef = useRef<HTMLInputElement>(null);
+  const manualIdRef = useRef<HTMLInputElement>(null);
+  const idCardRef = useRef<HTMLInputElement>(null);
+  const whatsappRef = useRef<HTMLInputElement>(null);
+  const visitDayRef = useRef<HTMLSelectElement>(null);
+  const addressRef = useRef<HTMLTextAreaElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
+
   // State for Formatted Inputs
   const [idCard, setIdCard] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
 
-  // 1. Categories load krna
-  useEffect(() => {
-    async function loadCategories() {
-      const res = await fetch(`/api/categories`);
-      const data = await res.json();
-      setCategories(data);
+  // Enter Key Navigation Handler
+  const handleKeyDown = (e: React.KeyboardEvent, nextRef: React.RefObject<any>) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Form submit hone se rokna
+      nextRef.current?.focus();
     }
-    loadCategories();
-  }, []);
+  };
 
-  // 2. ID Card Auto-Formatter (00000-0000000-0)
+  // ID Card Auto-Formatter (00000-0000000-0)
   const handleIDChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, ""); // Sirf numbers rkhna
-    if (val.length > 13) val = val.slice(0, 13); // Max 13 digits for CNIC
+    let val = e.target.value.replace(/\D/g, ""); 
+    if (val.length > 13) val = val.slice(0, 13);
     
     let formatted = val;
     if (val.length > 5 && val.length <= 12) {
@@ -37,22 +40,11 @@ export default function NewCustomerPage() {
     setIdCard(formatted);
   };
 
-  // 3. WhatsApp 11-digit Limit
+  // WhatsApp 11-digit Limit
   const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, "");
     if (val.length <= 11) {
       setWhatsapp(val);
-    }
-  };
-
-  const handleCategoryChange = async (catId: string) => {
-    setSelectedCategory(catId);
-    if (catId) {
-      const res = await fetch(`/api/products?categoryId=${catId}`);
-      const data = await res.json();
-      setProducts(data);
-    } else {
-      setProducts([]);
     }
   };
 
@@ -69,92 +61,110 @@ export default function NewCustomerPage() {
         </div>
         
         <form action={createCustomerAction} className="space-y-5">
-          {/* Full Name */}
+          {/* 1. Full Name */}
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase mb-1">Full Name</label>
-            <input name="name" type="text" required placeholder="Enter customer name" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            <input 
+              ref={nameRef}
+              name="name" 
+              type="text" 
+              required 
+              onKeyDown={(e) => handleKeyDown(e, manualIdRef)}
+              placeholder="Enter customer name" 
+              className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" 
+            />
+          </div>
+
+          {/* 2. Manual Unique ID */}
+          <div>
+            <label className="block text-xs font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
+              <Hash className="w-3 h-3" /> Manual Customer ID (Unique)
+            </label>
+            <input 
+              ref={manualIdRef}
+              name="manual_id" 
+              type="text" 
+              required 
+              onKeyDown={(e) => handleKeyDown(e, idCardRef)}
+              placeholder="e.g. CUST-001" 
+              className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold text-blue-700" 
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* ID Card with Auto-Format */}
+            {/* 3. ID Card */}
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
                 <CreditCard className="w-3 h-3" /> ID Card Number
               </label>
               <input 
+                ref={idCardRef}
                 name="id_card" 
                 type="text" 
                 placeholder="00000-0000000-0" 
                 value={idCard}
                 onChange={handleIDChange}
+                onKeyDown={(e) => handleKeyDown(e, whatsappRef)}
                 className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" 
               />
             </div>
 
-            {/* WhatsApp with 11 Digit Limit */}
+            {/* 4. WhatsApp */}
             <div>
               <label className="block text-xs font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
                 <Smartphone className="w-3 h-3" /> WhatsApp Number
               </label>
               <input 
+                ref={whatsappRef}
                 name="whatsapp" 
                 type="text" 
                 required 
                 placeholder="e.g. 03001234567" 
                 value={whatsapp}
                 onChange={handleWhatsappChange}
+                onKeyDown={(e) => handleKeyDown(e, visitDayRef)}
                 className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" 
               />
-              <p className="text-[10px] text-gray-400 mt-1">{whatsapp.length}/11 digits added</p>
             </div>
           </div>
 
-          {/* Visit Day Selection */}
+          {/* 5. Visit Day Selection */}
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase mb-1">Assign Visit Day</label>
-            <select name="visit_day" required className="w-full p-3 border rounded-xl bg-white outline-none font-medium">
+            <select 
+              ref={visitDayRef}
+              name="visit_day" 
+              required 
+              onKeyDown={(e) => handleKeyDown(e, addressRef)}
+              className="w-full p-3 border rounded-xl bg-white outline-none font-medium"
+            >
               <option value="">Select a day</option>
-              {[`Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday`, `Sunday`].map(day => (
+              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
                 <option key={day} value={day}>{day}</option>
               ))}
             </select>
           </div>
 
-          {/* Dynamic Inventory Link */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-blue-50 rounded-2xl border border-blue-100">
-            <div>
-              <label className="block text-[10px] font-black text-blue-800 mb-1 uppercase tracking-widest">Business Category</label>
-              <select 
-                name="inventory_category_id" 
-                required 
-                className="w-full p-3 border border-blue-200 rounded-lg outline-none bg-white font-bold"
-                onChange={(e) => handleCategoryChange(e.target.value)}
-              >
-                <option value="">Choose Rice or Daal</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-blue-800 mb-1 uppercase tracking-widest">Preferred Product</label>
-              <select 
-                name="preferred_product_id" 
-                required 
-                disabled={!selectedCategory}
-                className="w-full p-3 border border-blue-200 rounded-lg outline-none bg-white disabled:bg-gray-100 font-bold"
-              >
-                <option value="">{selectedCategory ? `Select Item` : `Select Category First`}</option>
-                {products.map(prod => <option key={prod.id} value={prod.id}>{prod.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Address */}
+          {/* 6. Address */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Business Address</label>
-            <textarea name="address" rows={2} placeholder="Complete shop address" className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"></textarea>
+            <label className="block text-xs font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> Business Address
+            </label>
+            <textarea 
+              ref={addressRef}
+              name="address" 
+              rows={2} 
+              onKeyDown={(e) => handleKeyDown(e, submitRef)}
+              placeholder="Complete shop address" 
+              className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+            ></textarea>
           </div>
 
-          <button type="submit" className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 shadow-lg active:scale-95 transition-all">
+          <button 
+            ref={submitRef}
+            type="submit" 
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 shadow-lg active:scale-95 transition-all"
+          >
             <Save className="w-5 h-5" /> Save Customer Record
           </button>
         </form>

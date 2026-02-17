@@ -1,5 +1,5 @@
 import sql from "@/lib/db";
-import { UserPlus, ShoppingBag, Phone, MapPin, Receipt, Edit, ArrowRight } from "lucide-react";
+import { UserPlus, ShoppingBag, Phone, MapPin, Receipt, Edit, Hash } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -10,6 +10,7 @@ import Link from "next/link";
  */
 
 export default async function SuppliersPage() {
+  // Database se suppliers ki list lena
   const suppliers = await sql`
     SELECT * FROM suppliers 
     ORDER BY created_at DESC
@@ -46,27 +47,34 @@ export default async function SuppliersPage() {
                 <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-pink-50 group-hover:text-pink-600 transition-colors font-black text-xl">
                   {s.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-widest">
-                  Active Partner
-                </span>
+                
+                {/* Manual ID Badge - Ab ye yahan show hogi */}
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-widest">
+                    Active Partner
+                  </span>
+                  <span className="text-[10px] font-black bg-pink-50 text-pink-600 px-2 py-1 rounded-md uppercase tracking-widest flex items-center gap-1 border border-pink-100">
+                    <Hash size={10} /> ID: {s.manual_id || "N/A"}
+                  </span>
+                </div>
               </div>
 
               <h3 className="text-xl font-black text-slate-900 uppercase mb-4 leading-tight">{s.name}</h3>
               
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Phone size={14} /></div>
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Phone size={11} /></div>
                   <span>{s.whatsapp_number}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><MapPin size={14} /></div>
-                  <span className="truncate">{s.address || `UAE Warehouse Location`}</span>
+                  <span className="truncate">{s.address || "UAE Warehouse Location"}</span>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-gray-50">
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Outstanding Balance</p>
-                <p className="text-2xl font-black text-slate-900">
+                <p className="text-2xl font-black text-slate-900 font-sans">
                   PKR {Number(s.total_balance || 0).toLocaleString()}
                 </p>
               </div>

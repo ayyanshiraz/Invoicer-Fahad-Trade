@@ -1,7 +1,6 @@
 "use server";
 import sql from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 /**
  * [SEO Friendly]
@@ -9,21 +8,28 @@ import { redirect } from "next/navigation";
  */
 
 export async function saveExpenseAction(formData: FormData) {
-  const description = formData.get(`description`);
-  const amount = formData.get(`amount`);
-  const category = formData.get(`category`);
+  const description = formData.get("description");
+  const amount = formData.get("amount");
+  const category = formData.get("category");
+  
+  // Aaj ki date nikalna takay database mein sahi din ka kharcha likha jaye
+  const expenseDate = new Date().toISOString().split("T")[0];
 
   try {
     await sql`
-      INSERT INTO expenses (description, amount, category)
-      VALUES (${description as string}, ${Number(amount)}, ${category as string})
+      INSERT INTO expenses (description, amount, category, expense_date)
+      VALUES (${description as string}, ${Number(amount)}, ${category as string}, ${expenseDate})
     `;
     
-    revalidatePath(`/dashboard/accounts/expenses`);
-  } catch (error) {
-    console.error(`Expense saving failed:`, error);
-    throw new Error(`Failed to record business expense`);
+    // Naya kharcha save hote hi dono pages ko taza (refresh) karna
+    revalidatePath("/dashboard/accounts/expenses");
+    revalidatePath("/dashboard/accounts/daily-ledger");
+    
+    // Client side par success message bhejna
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error("Expense saving failed:", error);
+    return { success: false, error: error.message || "Failed to record business expense" };
   }
-
-  redirect(`/dashboard/accounts/expenses`);
 }

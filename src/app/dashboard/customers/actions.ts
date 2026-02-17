@@ -3,12 +3,7 @@ import sql from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-/**
- * [SEO Friendly]
- * Customer transaction actions including profile management and ledger updates.
- */
 
-// 1. Customer Delete krne ka function
 export async function deleteCustomer(formData: FormData) {
   const id = formData.get(`id`);
   if (!id) return;
@@ -40,7 +35,6 @@ export async function updateCustomerAction(id: number, formData: FormData) {
   redirect(`/dashboard/customers`);
 }
 
-// 3. Naya Function: Customer Payment Record krna (Ledger k liye zaroori h)
 export async function recordCustomerPayment(formData: FormData) {
   const customerId = formData.get(`customer_id`);
   const amount = formData.get(`amount`);

@@ -1,5 +1,5 @@
 import sql from "@/lib/db";
-import { FileText, Printer, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import PrintButton from "@/components/PrintButton";
 
 // [SEO Friendly] Metadata
@@ -11,8 +11,10 @@ export const metadata = {
   metaDescription: `Generate accurate daily ledger reports including opening balance, today's sales, and payments received`,
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function DailyLedgerPage() {
-  // Logic: Aaj ki sales aur payments ko aggregated query se uthana [cite: 2026-02-15]
+  // 1. Aaj ki sales aur payments ko aggregated query se uthana 
   const reportData = await sql`
     SELECT 
       c.id, 
@@ -37,6 +39,20 @@ export default async function DailyLedgerPage() {
     ORDER BY c.name ASC
   `;
 
+  // 2. Aaj ke Total Cash Flow Metrics nikalna (Naya Code)
+  const cashMetrics = await sql`
+    SELECT 
+      (SELECT COALESCE(SUM(amount), 0) FROM customer_payments WHERE created_at::date = CURRENT_DATE) as total_recovery,
+      (SELECT COALESCE(SUM(payment_amount), 0) FROM invoices WHERE created_at::date = CURRENT_DATE) as cash_sales,
+      (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expense_date = CURRENT_DATE) as today_expenses,
+      (SELECT COALESCE(SUM(payment_amount), 0) FROM purchases WHERE created_at::date = CURRENT_DATE) as supplier_payments
+  `;
+
+  const metrics = cashMetrics[0];
+  const cashIn = Number(metrics.total_recovery) + Number(metrics.cash_sales);
+  const cashOut = Number(metrics.today_expenses) + Number(metrics.supplier_payments);
+  const cashInHand = cashIn - cashOut;
+
   const today = new Date().toLocaleDateString(`en-GB`, {
     weekday: `long`,
     year: `numeric`,
@@ -58,10 +74,10 @@ export default async function DailyLedgerPage() {
       <div className="bg-white p-8 border border-gray-200 shadow-xl print:shadow-none print:border-none print:p-0">
         <div className="text-center mb-8 border-b-2 border-slate-900 pb-4">
           {/* Logo for Printed Report */}
-<div className="flex flex-col items-center mb-4">
-  <img src="/logo.png" alt="Fahad Traders" className="w-24 h-24 object-contain mb-2" />
-  <h1 className="text-2xl font-black text-black tracking-tighter uppercase">Fahad Traders</h1>
-</div>
+          <div className="flex flex-col items-center mb-4">
+            <img src="/logo.png" alt="Fahad Traders" className="w-24 h-24 object-contain mb-2" />
+            <h1 className="text-2xl font-black text-black tracking-tighter uppercase">Fahad Traders</h1>
+          </div>
           <p className="text-sm font-bold text-slate-600 mt-1 uppercase tracking-widest">Customer Ledger Summary</p>
           <div className="mt-2 text-xs font-black text-black flex justify-center gap-8">
              <span>Date: {new Date().toLocaleDateString()}</span>
@@ -69,6 +85,23 @@ export default async function DailyLedgerPage() {
           </div>
         </div>
 
+        {/* --- NAYA SECTION: CASH FLOW SUMMARY (Print Style) --- */}
+        <div className="grid grid-cols-3 gap-4 border-2 border-black p-4 mb-8 bg-gray-50">
+           <div className="text-center border-r-2 border-black">
+              <p className="text-[10px] font-black uppercase text-gray-700 tracking-widest mb-1">Total Cash IN</p>
+              <h3 className="text-xl font-black text-black font-mono">{cashIn.toLocaleString()}</h3>
+           </div>
+           <div className="text-center border-r-2 border-black">
+              <p className="text-[10px] font-black uppercase text-gray-700 tracking-widest mb-1">Total Cash OUT</p>
+              <h3 className="text-xl font-black text-black font-mono">{cashOut.toLocaleString()}</h3>
+           </div>
+           <div className="text-center bg-black text-white py-2">
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-gray-300">Net Cash In Drawer</p>
+              <h3 className="text-xl font-black font-mono">{cashInHand.toLocaleString()}</h3>
+           </div>
+        </div>
+
+        {/* --- CUSTOMER LEDGER TABLE (Aap ka Original Format) --- */}
         <table className="w-full border-collapse border-2 border-black text-[11px]">
           <thead className="bg-gray-100 font-black">
             <tr>
@@ -85,7 +118,7 @@ export default async function DailyLedgerPage() {
               const closing = Number(row.current_balance);
               const invoiced = Number(row.invoiced_amount);
               const paid = Number(row.paid_amount);
-              // Logic: Closing = Opening + Invoiced - Paid -> so Opening = Closing - Invoiced + Paid [cite: 2026-02-15]
+              // Logic: Closing = Opening + Invoiced - Paid -> so Opening = Closing - Invoiced + Paid 
               const opening = closing - invoiced + paid;
 
               return (

@@ -3,22 +3,12 @@ import sql from "@/lib/db";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-/**
- * [SEO Friendly]
- * seo title: Process Sale Invoice - Fahad Traders
- * slug: dashboard/invoice/new/save
- * meta description: Securely save invoices, update inventory stock, and maintain customer ledgers for Fahad Traders UAE
- * focus key phrase: Process Sale Invoice
- * seo key phrase: Inventory and Ledger Management
- * img alt text: Backend logic for processing business invoices and stock updates
- * seo keywords: invoice, sale, stock, ledger, customer balance, fahad traders uae
- */
-
 export async function saveInvoiceAction(
-  customerId: string, 
+  customerId: any, 
   items: any[], 
   grandTotal: number, 
-  paymentAmount: number = 0
+  paymentAmount: number,
+  invoiceDate: string 
 ) {
   let newInvoiceId: number | null = null;
   let isError = false;
@@ -28,16 +18,15 @@ export async function saveInvoiceAction(
     const billTotal = Number(grandTotal);
     const paid = Number(paymentAmount);
 
-    // 1. Customer ka purana balance (Previous Balance) uthana [cite: 2026-02-15]
+    // 1. Customer ka purana balance uthana takay record me save ho sakay
     const customerData = await sql`
       SELECT total_balance FROM customers WHERE id = ${cid}
     `;
     
     const previousBalance = Number(customerData[0]?.total_balance || 0);
 
-    // 2. Naya Current Balance calculate krna
-    // Logic: Opening + Invoiced - Paid = Closing
-    const currentBalance = previousBalance + billTotal - paid;
+    // 2. Naya Closing Balance calculate krna (Logic: Purana + (Aaj ka Bill - Aaj ki Payment))
+    const currentBalance = previousBalance + (billTotal - paid);
 
     // 3. Main Invoice save krna
     const invoiceResult = await sql`
@@ -47,7 +36,8 @@ export async function saveInvoiceAction(
         previous_balance, 
         payment_amount, 
         current_balance, 
-        status
+        status,
+        created_at
       )
       VALUES (
         ${cid}, 
@@ -55,20 +45,22 @@ export async function saveInvoiceAction(
         ${previousBalance}, 
         ${paid}, 
         ${currentBalance}, 
-        ${`Paid`}
+        ${`Paid`},
+        ${invoiceDate}
       )
       RETURNING id
     `;
     
     newInvoiceId = invoiceResult[0].id;
 
-    // 4. Loop k zariye items save krna aur stock kam krna [cite: 2026-02-15]
+    // 4. Items save krna aur inventory stock kam krna
     for (const item of items) {
+      if (!item.productId) continue;
+
       const pid = Number(item.productId);
       const qty = Number(item.qty);
       const price = Number(item.price);
 
-      // Invoice items entry
       await sql`
         INSERT INTO invoice_items (
           invoice_id, 
@@ -86,7 +78,7 @@ export async function saveInvoiceAction(
         )
       `;
 
-      // Inventory update: Maal bechne pr stock kam hoga (-) [cite: 2026-02-15]
+      // Stock Quantity update krna
       await sql`
         UPDATE products 
         SET stock_quantity = stock_quantity - ${qty}
@@ -94,31 +86,30 @@ export async function saveInvoiceAction(
       `;
     }
 
-    // 5. Customer ka total_balance update krna table me [cite: 2026-02-15]
+    // 5. Customer table me kul balance update krna
     await sql`
       UPDATE customers 
       SET total_balance = ${currentBalance}
       WHERE id = ${cid}
     `;
 
-    // 6. Cache clear krna taake saara data refresh ho jaye [cite: 2025-11-05]
+    // 6. Paths refresh krna
     revalidatePath(`/dashboard/inventory/product`);
     revalidatePath(`/dashboard/invoice`);
     revalidatePath(`/dashboard/customers`);
-    revalidatePath(`/dashboard/accounts/receivable`);
     revalidatePath(`/dashboard/accounts/daily-ledger`);
 
   } catch (error) {
-    console.error(`Database Operation Error:`, error);
+    console.error(`Database Save Error:`, error);
     isError = true;
   }
   
-  // 7. Important: Redirect hamesha try-catch k bahar hona chahiye [cite: 2026-02-15]
   if (isError) {
-    return { error: `Database failed to process the transaction correctly` };
+    throw new Error(`Database failed to process the transaction correctly`);
   }
 
+  // 7. Redirect direct details page pr
   if (newInvoiceId) {
-    redirect(`/dashboard/invoice/${newInvoiceId}`);
+    redirect(`/dashboard/invoice/` + newInvoiceId);
   }
 }

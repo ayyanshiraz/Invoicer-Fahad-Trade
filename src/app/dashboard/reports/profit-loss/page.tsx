@@ -1,6 +1,5 @@
 import sql from "@/lib/db";
-import { TrendingUp, TrendingDown, DollarSign, PieChart, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react";
 
 /**
  * [SEO Friendly] Details:
@@ -10,28 +9,31 @@ import Link from "next/link";
  * focus key phrase: Monthly Profit and Loss UAE
  */
 
+// Ye line is page ko 100% Real-Time bana de gi
+export const dynamic = "force-dynamic";
+
 export default async function ProfitLossPage() {
-  // 1. Current Month ki Dates nikalna [cite: 2026-02-15]
+  // 1. Current Month ki Dates nikalna
   const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-  // 2. Sales (Revenue) Calculate krna
+  // 2. Sales (Revenue) Calculate krna (COALESCE laga diya taake 0 handle ho)
   const salesData = await sql`
-    SELECT SUM(total_amount) as total FROM invoices 
+    SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices 
     WHERE created_at >= ${firstDay}
   `;
   const totalSales = Number(salesData[0]?.total || 0);
 
   // 3. Purchases (Cost) Calculate krna
   const purchaseData = await sql`
-    SELECT SUM(total_amount) as total FROM purchases 
+    SELECT COALESCE(SUM(total_amount), 0) as total FROM purchases 
     WHERE created_at >= ${firstDay}
   `;
   const totalPurchases = Number(purchaseData[0]?.total || 0);
 
-  // 4. Operating Expenses Calculate krna
+  // 4. Operating Expenses Calculate krna (Yahan expense_date lagaya hai)
   const expenseData = await sql`
-    SELECT SUM(amount) as total FROM expenses 
-    WHERE created_at >= ${firstDay}
+    SELECT COALESCE(SUM(amount), 0) as total FROM expenses 
+    WHERE expense_date >= ${firstDay}::date
   `;
   const totalExpenses = Number(expenseData[0]?.total || 0);
 
@@ -65,7 +67,7 @@ export default async function ProfitLossPage() {
               <span className="text-[10px] font-black text-emerald-600 uppercase bg-emerald-50 px-2 py-1 rounded">Revenue</span>
            </div>
            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Total Monthly Sales</p>
-           <h3 className="text-3xl font-black text-slate-900">PKR {totalSales.toLocaleString()}</h3>
+           <h3 className="text-3xl font-black text-slate-900 font-mono">PKR {totalSales.toLocaleString()}</h3>
         </div>
 
         {/* Total Purchases Card */}
@@ -75,7 +77,7 @@ export default async function ProfitLossPage() {
               <span className="text-[10px] font-black text-amber-600 uppercase bg-amber-50 px-2 py-1 rounded">Inventory Cost</span>
            </div>
            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Total Purchases</p>
-           <h3 className="text-3xl font-black text-slate-900">PKR {totalPurchases.toLocaleString()}</h3>
+           <h3 className="text-3xl font-black text-slate-900 font-mono">PKR {totalPurchases.toLocaleString()}</h3>
         </div>
 
         {/* Total Expenses Card */}
@@ -85,7 +87,7 @@ export default async function ProfitLossPage() {
               <span className="text-[10px] font-black text-red-600 uppercase bg-red-50 px-2 py-1 rounded">Operating</span>
            </div>
            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Dukan Expenses</p>
-           <h3 className="text-3xl font-black text-slate-900">PKR {totalExpenses.toLocaleString()}</h3>
+           <h3 className="text-3xl font-black text-slate-900 font-mono">PKR {totalExpenses.toLocaleString()}</h3>
         </div>
       </div>
 
@@ -111,19 +113,19 @@ export default async function ProfitLossPage() {
         <div className="divide-y divide-gray-50 font-bold">
            <div className="p-6 flex justify-between items-center hover:bg-gray-50 transition-all">
               <span className="text-slate-500 uppercase text-sm">Total Revenue from Sales</span>
-              <span className="text-slate-900">PKR {totalSales.toLocaleString()}</span>
+              <span className="text-slate-900 font-mono">PKR {totalSales.toLocaleString()}</span>
            </div>
            <div className="p-6 flex justify-between items-center hover:bg-gray-50 transition-all">
               <span className="text-slate-500 uppercase text-sm">Cost of Goods Purchased</span>
-              <span className="text-red-500">- PKR {totalPurchases.toLocaleString()}</span>
+              <span className="text-red-500 font-mono">- PKR {totalPurchases.toLocaleString()}</span>
            </div>
            <div className="p-6 flex justify-between items-center hover:bg-gray-50 transition-all">
               <span className="text-slate-500 uppercase text-sm">Business Operational Expenses</span>
-              <span className="text-red-500">- PKR {totalExpenses.toLocaleString()}</span>
+              <span className="text-red-500 font-mono">- PKR {totalExpenses.toLocaleString()}</span>
            </div>
            <div className="p-6 flex justify-between items-center bg-blue-50/30">
               <span className="font-black text-blue-600 uppercase text-sm">Gross Margin (Sales - Cost)</span>
-              <span className="font-black text-blue-900">PKR {grossProfit.toLocaleString()}</span>
+              <span className="font-black text-blue-900 font-mono">PKR {grossProfit.toLocaleString()}</span>
            </div>
         </div>
       </div>

@@ -1,75 +1,121 @@
 "use client";
-import { Save, UserPlus, ArrowLeft, Building2, Smartphone, Map } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, Save, UserPlus, Hash, Smartphone, MapPin, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { createSupplierAction } from "./actions";
 
 export default function NewSupplierPage() {
+  const nameRef = useRef<HTMLInputElement>(null);
+  const manualIdRef = useRef<HTMLInputElement>(null);
+  const contactRef = useRef<HTMLInputElement>(null);
+  const whatsappRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLTextAreaElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent, nextRef: React.RefObject<any>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      nextRef.current?.focus();
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href="/dashboard/suppliers" className="flex items-center gap-2 text-blue-600 font-black text-sm uppercase tracking-widest mb-4">
-        <ArrowLeft size={16} /> Back to Directory
+      <Link href="/dashboard/suppliers" className="flex items-center gap-2 text-blue-600 font-bold mb-4">
+        <ArrowLeft className="w-4 h-4" /> Back to Suppliers
       </Link>
 
-      <div className="bg-white p-10 rounded-[40px] shadow-2xl shadow-slate-200/50 border border-gray-100">
-        <div className="flex items-center gap-4 mb-10">
-          <div className="p-4 bg-pink-50 text-pink-600 rounded-2xl">
-            <UserPlus size={32} />
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 bg-blue-600 text-white rounded-xl shadow-lg">
+            <UserPlus className="w-8 h-8" />
           </div>
           <div>
-            <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Register Supplier</h2>
-            <p className="text-gray-400 font-bold text-sm">Create a new wholesaler profile for inventory procurement</p>
+            <h2 className="text-2xl font-bold text-gray-800">Register New Supplier</h2>
+            <p className="text-sm text-gray-500 font-medium">Set a manual ID for easy procurement search</p>
           </div>
         </div>
+        
+        <form action={createSupplierAction} className="space-y-5">
+          <div>
+            <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Supplier / Firm Name</label>
+            <input 
+              ref={nameRef}
+              name="name" 
+              type="text" 
+              required 
+              onKeyDown={(e) => handleKeyDown(e, manualIdRef)}
+              placeholder="e.g. Al-Fatah Wholesalers" 
+              className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold" 
+            />
+          </div>
 
-        <form action={createSupplierAction} className="space-y-8">
-          <div className="space-y-6">
-            {/* Company Name */}
+          <div>
+            <label className="block text-[10px] font-black text-blue-600 uppercase mb-1 flex items-center gap-1">
+              <Hash className="w-3 h-3" /> Manual Supplier ID (Used for Search)
+            </label>
+            <input 
+              ref={manualIdRef}
+              name="manual_id" 
+              type="text" 
+              required 
+              onKeyDown={(e) => handleKeyDown(e, contactRef)}
+              placeholder="e.g. SUP-101" 
+              className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50/50 font-black text-blue-700 uppercase" 
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">
-                <Building2 size={12} /> Company or Person Name
+              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <UserCheck className="w-3 h-3" /> Contact Person
               </label>
               <input 
-                name="name" 
+                ref={contactRef}
+                name="contact_person" 
                 type="text" 
-                required 
-                placeholder="Enter wholesaler name" 
-                className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-pink-500 focus:bg-white transition-all font-bold text-slate-800"
+                placeholder="Manager Name" 
+                onKeyDown={(e) => handleKeyDown(e, whatsappRef)}
+                className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold" 
               />
             </div>
 
-            {/* Contact Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">
-                  <Smartphone size={12} /> WhatsApp Number
-                </label>
-                <input 
-                  name="whatsapp" 
-                  type="text" 
-                  required 
-                  placeholder="03XXXXXXXXX" 
-                  className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-pink-500 focus:bg-white transition-all font-bold text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">
-                  <Map size={12} /> Office Location
-                </label>
-                <input 
-                  name="address" 
-                  type="text" 
-                  placeholder="City or Warehouse Area" 
-                  className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-pink-500 focus:bg-white transition-all font-bold text-slate-800"
-                />
-              </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <Smartphone className="w-3 h-3" /> WhatsApp Number
+              </label>
+              <input 
+                ref={whatsappRef}
+                name="whatsapp" 
+                type="text" 
+                required 
+                placeholder="03XXXXXXXXX" 
+                onKeyDown={(e) => handleKeyDown(e, addressRef)}
+                className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold" 
+              />
             </div>
           </div>
 
+          <div>
+            <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> Address
+            </label>
+            <textarea 
+              ref={addressRef}
+              name="address" 
+              rows={2} 
+              onKeyDown={(e) => { if(e.key === "Enter") { e.preventDefault(); submitRef.current?.focus(); } }}
+              placeholder="Supplier warehouse or office address" 
+              className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold"
+            ></textarea>
+          </div>
+
           <button 
+            ref={submitRef}
             type="submit" 
-            className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] hover:bg-pink-600 transition-all shadow-xl shadow-slate-200 active:scale-95 flex items-center justify-center gap-3"
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 active:scale-95 transition-all"
           >
-            <Save size={20} /> Save Record
+            <Save className="w-5 h-5" /> Save Supplier Record
           </button>
         </form>
       </div>
